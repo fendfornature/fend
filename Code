@@ -1,0 +1,159 @@
+-- Create Animals Table
+CREATE TABLE animals (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  scientific_name TEXT,
+  image_url TEXT,
+  category TEXT
+);
+
+-- Create Facts Table
+CREATE TABLE facts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  animal_id UUID REFERENCES animals(id) ON DELETE CASCADE,
+  fact_text TEXT NOT NULL
+);
+
+-- Create Daily Facts Table
+CREATE TABLE daily_facts (
+  date DATE PRIMARY KEY,
+  fact1_id UUID REFERENCES facts(id),
+  fact2_id UUID REFERENCES facts(id),
+  fact3_id UUID REFERENCES facts(id)
+);
+import { NextResponse } from 'next/server';
+
+export async function GET() {
+  // In your production version, you will query Supabase here:
+  // const { data, error } = await supabase.from('daily_facts').select('...')
+  
+  // MVP Mock Data matching your exact specifications
+  const todayFacts = {
+    date: new Date().toISOString().split('T')[0], // e.g., "2026-06-02"
+    facts: [
+      {
+        animal: "Elephant",
+        image: "https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?w=500&q=80",
+        fact: "Elephants can recognize themselves in mirrors."
+      },
+      {
+        animal: "Macaw",
+        image: "https://images.unsplash.com/photo-1552728089-57168864d0f2?w=500&q=80",
+        fact: "Some macaws can live over 60 years."
+      },
+      {
+        animal: "Komodo Dragon",
+        image: "https://images.unsplash.com/photo-1600861194942-f883de0dfe96?w=500&q=80",
+        fact: "Komodo dragons can detect prey from miles away."
+      }
+    ]
+  };
+
+  return NextResponse.json(todayFacts);
+}
+// tailwind.config.ts
+module.exports = {
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        forest: '#2E7D32',
+        lightGreen: '#81C784',
+        bgGreen: '#F8FFF8',
+        accentYellow: '#FFC107',
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        headings: ['Poppins', 'sans-serif'],
+      }
+    },
+  },
+  plugins: [],
+}
+'use client';
+
+import { useEffect, useState } from 'react';
+
+// Define the Types based on your API response
+interface AnimalFact {
+  animal: string;
+  image: string;
+  fact: string;
+}
+
+interface DailyData {
+  date: string;
+  facts: AnimalFact[];
+}
+
+export default function Home() {
+  const [data, setData] = useState<DailyData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFacts = async () => {
+      try {
+        const response = await fetch('/api/daily-facts');
+        const result = await response.json();
+        setData(result);
+      } catch (error) {
+        console.error("Failed to fetch daily facts:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFacts();
+  }, []);
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-bgGreen text-forest font-headings text-2xl">Loading today's facts...</div>;
+  }
+
+  return (
+    <main className="min-h-screen bg-bgGreen text-gray-900 py-12 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-6xl mx-auto">
+        
+        {/* Header Section */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold text-forest font-headings mb-4">
+            Daily Animal Facts
+          </h1>
+          <p className="text-lg text-forest/80">
+            Discover three fascinating wildlife facts for {data?.date}
+          </p>
+        </div>
+
+        {/* Fact Cards Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {data?.facts.map((item, index) => (
+            <div 
+              key={index} 
+              className="bg-white rounded-2xl shadow-lg overflow-hidden border border-lightGreen hover:shadow-xl transition-shadow duration-300"
+            >
+              <div className="h-48 overflow-hidden relative">
+                <img 
+                  src={item.image} 
+                  alt={item.animal} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              
+              <div className="p-6">
+                <h2 className="text-2xl font-bold text-forest font-headings mb-3">
+                  {item.animal}
+                </h2>
+                <div className="bg-bgGreen p-4 rounded-xl border-l-4 border-accentYellow text-gray-700">
+                  <p><strong>Fact:</strong> {item.fact}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+      </div>
+    </main>
+  );
+}
